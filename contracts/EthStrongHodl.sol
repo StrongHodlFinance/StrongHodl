@@ -6,39 +6,35 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "hardhat/console.sol";
 
-contract EthStrongHodl is ERC20Upgradeable, EIP712Upgradeable, OwnableUpgradeable{
-
+contract EthStrongHodl is ERC20Upgradeable, EIP712Upgradeable, OwnableUpgradeable
+{
     uint256 chainId;
     address public operator;
-    bytes32 constant REDEEM_HASH = keccak256("Redeem(uint256 amount,uint256 sourceChainId,uint256 targetChainId,uint256 expiryTime,address targetAddress,bytes sourceAddress,bytes sourseHash)");
+    bytes32 constant REDEEM_HASH = keccak256("Redeem(uint256 amount,uint256 sourceChainId,uint256 targetChainId,uint256 expiryTime,uint160 targetAddress,bytes32 sourceAddress,bytes32 sourseHash)");
 
-    mapping (bytes => bool) alreadyRedeemed;
+    mapping (bytes32 => bool) alreadyRedeemed;
 
     struct Redeem{
         uint256 amount;
         uint256 sourceChainId;
         uint256 targetChainId;
         uint256 expiryTime;
-        address targetAddress;
-        bytes sourceAddress;
-        bytes sourseHash;
+        uint160 targetAddress;
+        bytes32 sourceAddress;
+        bytes32 sourseHash;
     }
+
 
     event changedOperator(address oldAddress, address newAddress);
     event redeemETHstUSDT(Redeem _redeem);
-    event depositstUSDT(uint256 amount, uint256 sourceChainId, uint256 targetChainId, address sourceAddress);
-
+    event depositstUSDT(uint256 amount, uint256 sourceChainId, uint256 targetChainId); //string sourceAddress --- have to add it here in the event
     error WrongSourceChainId();
     error WrongTargetChainId();
     error WrongSignature();
     error TimeExpired(uint256 expectedTime);
     error InsufficientAmount();
-
-    // constructor(){
-    //     _disableInitializers();
-    // }
+    error AlreadyClaimed();
 
     function initialize(address _operator) initializer external{
         chainId = 2;
@@ -58,23 +54,19 @@ contract EthStrongHodl is ERC20Upgradeable, EIP712Upgradeable, OwnableUpgradeabl
         if(_redeem.expiryTime < block.timestamp) revert TimeExpired(_redeem.expiryTime);
         if(_redeem.sourceChainId != chainId) revert WrongSourceChainId();
         if(_redeem.targetChainId == chainId) revert WrongTargetChainId();
+        if(alreadyRedeemed[_redeem.sourseHash])
+            revert AlreadyClaimed();
         bytes32 hash = keccak256(abi.encode(REDEEM_HASH, _redeem.amount, _redeem.sourceChainId, _redeem.targetChainId, _redeem.expiryTime, _redeem.targetAddress, _redeem.sourceAddress, _redeem.sourseHash));
         bytes32 digest = _hashTypedDataV4(hash);
-        console.logBytes32(digest);
         address signer = ECDSA.recover(digest, _signature);
-        console.log("signer in contract smart contract==>: ", signer);
 
         if(signer != operator)
             revert WrongSignature();
 
-        _mint(_redeem.targetAddress, _redeem.amount);
+        _mint(address(_redeem.targetAddress), _redeem.amount);
         alreadyRedeemed[_redeem.sourseHash] = true;
         emit redeemETHstUSDT(_redeem);
     }
-    function getDomainSeparator() external view returns (bytes32) {
-        return _domainSeparatorV4();
-    }
-
 
     function deposit(uint256 _amount, uint256 _destinationChainId) external
     {
@@ -84,6 +76,6 @@ contract EthStrongHodl is ERC20Upgradeable, EIP712Upgradeable, OwnableUpgradeabl
             revert WrongTargetChainId();
 
         _burn(msg.sender, _amount);
-        emit depositstUSDT(_amount, 2, _destinationChainId, msg.sender);
-    }    
+        emit depositstUSDT(_amount, 2, _destinationChainId);
+    }   
 }
