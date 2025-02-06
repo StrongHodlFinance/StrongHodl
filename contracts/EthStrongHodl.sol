@@ -27,8 +27,9 @@ contract EthStrongHodl is ERC20Upgradeable, EIP712Upgradeable, OwnableUpgradeabl
 
 
     event changedOperator(address oldAddress, address newAddress);
-    event redeemETHstUSDT(Redeem _redeem);
-    event depositstUSDT(uint256 amount, uint256 sourceChainId, uint256 targetChainId); //string sourceAddress --- have to add it here in the event
+    event redeemETHshBTC(Redeem _redeem);
+    event depositshBTC(uint256 amount, uint256 sourceChainId, uint256 targetChainId, address sourceAddress);
+
     error WrongSourceChainId();
     error WrongTargetChainId();
     error WrongSignature();
@@ -49,8 +50,7 @@ contract EthStrongHodl is ERC20Upgradeable, EIP712Upgradeable, OwnableUpgradeabl
         emit changedOperator(operator, _operator);
     }
 
-    function redeem_stUSDT(Redeem calldata _redeem, bytes calldata _signature) external
-    {
+    function redeem_shBTC(Redeem calldata _redeem, bytes calldata _signature) external{
         if(_redeem.expiryTime < block.timestamp) revert TimeExpired(_redeem.expiryTime);
         if(_redeem.sourceChainId != chainId) revert WrongSourceChainId();
         if(_redeem.targetChainId == chainId) revert WrongTargetChainId();
@@ -65,7 +65,7 @@ contract EthStrongHodl is ERC20Upgradeable, EIP712Upgradeable, OwnableUpgradeabl
 
         _mint(address(_redeem.targetAddress), _redeem.amount);
         alreadyRedeemed[_redeem.sourseHash] = true;
-        emit redeemETHstUSDT(_redeem);
+        emit redeemETHshBTC(_redeem);
     }
 
     function deposit(uint256 _amount, uint256 _destinationChainId) external
@@ -76,6 +76,8 @@ contract EthStrongHodl is ERC20Upgradeable, EIP712Upgradeable, OwnableUpgradeabl
             revert WrongTargetChainId();
 
         _burn(msg.sender, _amount);
-        emit depositstUSDT(_amount, 2, _destinationChainId);
-    }   
+        emit depositshBTC(_amount, 2, _destinationChainId, msg.sender);
+    }    
 }
+
+

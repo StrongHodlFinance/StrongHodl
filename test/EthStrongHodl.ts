@@ -61,27 +61,27 @@ describe("Eth Strong Hodl Test cases", async () => {
         });
 
         it("should successfully redeem tokens and update balance", async function () {
-            await expect(contract.connect(user).redeem_stUSDT(message, signature))
-                .to.emit(contract, "redeemETHstUSDT");
+            await expect(contract.connect(user).redeem_shBTC(message, signature))
+                .to.emit(contract, "redeemETHshBTC");
 
             const userBalance = await contract.balanceOf(await user.getAddress());
             expect(userBalance).to.equal(amountToRedeem);
         });
 
         it("should prevent double redemption using the same sourceHash", async function () {
-            await contract.connect(user).redeem_stUSDT(message, signature);
+            await contract.connect(user).redeem_shBTC(message, signature);
 
-            await expect(contract.connect(user).redeem_stUSDT(message, signature))
+            await expect(contract.connect(user).redeem_shBTC(message, signature))
                 .to.be.revertedWithCustomError(contract, "AlreadyClaimed");
         });
 
         it("should allow the user to deposit redeemed tokens", async function () {
-            await contract.connect(user).redeem_stUSDT(message, signature);
+            await contract.connect(user).redeem_shBTC(message, signature);
 
             await contract.connect(user).approve(contract.getAddress(), amountToRedeem);
             await expect(contract.connect(user).deposit(amountToRedeem, 3))
-                .to.emit(contract, "depositstUSDT")
-                .withArgs(amountToRedeem, 2, 3);
+                .to.emit(contract, "depositshBTC")
+                .withArgs(amountToRedeem, 2, 3, await user.getAddress());
 
             const userBalance = await contract.balanceOf(await user.getAddress());
             expect(userBalance).to.equal(0);
